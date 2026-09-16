@@ -28,12 +28,20 @@
       status: document.getElementById(`a${n}-status`),
       saveConfigBtn: document.getElementById(`a${n}-save-config`),
       loadConfigBtn: document.getElementById(`a${n}-load-config`),
+      importConfigBtn: document.getElementById(`a${n}-import-config`),
+      configSelect: document.getElementById(`a${n}-config-select`),
       loadConfigFile: document.getElementById(`a${n}-load-config-file`),
     };
   }
 
   const agent1 = agentEls(1);
   const agent2 = agentEls(2);
+  const folderStatusEl = document.getElementById("config-folder-status");
+  const chooseFolderBtn = document.getElementById("choose-folder-btn");
+
+  const CONFIG_FILENAME_RE = /^llmpingpong_.*\.json$/i;
+  const supportsFsAccess = typeof window.showDirectoryPicker === "function";
+  let configDirHandle = null;
 
   let running = false;
   let stopRequested = false;
@@ -327,7 +335,131 @@
   }
 
   function agentConfigFilename(cfg) {
-    return `${sanitizeFilenamePart(cfg.name)}_${sanitizeFilenamePart(cfg.model)}.json`;
+    return `llmpingpong_${sanitizeFilenamePart(cfg.name)}_${sanitizeFilenamePart(cfg.model)}.json`;
+  }
+
+  // --- IndexedDB: remember the chosen config folder handle across reloads ---
+  const IDB_NAME = "llm-pingpong-db";
+  const IDB_STORE = "handles";
+  const IDB_FOLDER_KEY = "configDir";
+
+  function idbOpen() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function idbSet(key, value) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).put(value, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async function idbGet(key) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readonly");
+      const req = tx.objectStore(IDB_STORE).get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  // --- Config folder (File System Access API) ---
+
+  function setFolderStatus(text, cls) {
+    folderStatusEl.textContent = text;
+    folderStatusEl.className = "folder-status" + (cls ? ` ${cls}` : "");
+  }
+
+  async function listConfigFiles() {
+    if (!configDirHandle) return [];
+    const names = [];
+    for await (const [name, handle] of configDirHandle.entries()) {
+      if (handle.kind === "file" && CONFIG_FILENAME_RE.test(name)) names.push(name);
+    }
+    return names.sort();
+  }
+
+  async function refreshConfigFileLists() {
+    const files = await listConfigFiles();
+    for (const a of [agent1, agent2]) {
+      const current = a.configSelect.value;
+      a.configSelect.innerHTML = "";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = files.length ? "Select a config…" : "No configs found";
+      a.configSelect.appendChild(placeholder);
+      for (const name of files) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        a.configSelect.appendChild(opt);
+      }
+      if (files.includes(current)) a.configSelect.value = current;
+    }
+  }
+
+  async function chooseConfigFolder() {
+    if (!supportsFsAccess) {
+      setFolderStatus("Not supported in this browser — use Import/Save-as-download instead", "warn");
+      return;
+    }
+    try {
+      const handle = await window.showDirectoryPicker();
+      configDirHandle = handle;
+      try {
+        await idbSet(IDB_FOLDER_KEY, handle);
+      } catch (_) {
+        // IndexedDB persistence is best-effort
+      }
+      setFolderStatus(handle.name, "ok");
+      await refreshConfigFileLists();
+    } catch (err) {
+      if (err.name !== "AbortError") setFolderStatus(`Folder access failed: ${err.message}`, "warn");
+    }
+  }
+
+  async function tryRestoreConfigFolder() {
+    if (!supportsFsAccess) {
+      setFolderStatus("Not supported in this browser", "warn");
+      chooseFolderBtn.disabled = true;
+      return;
+    }
+    let handle;
+    try {
+      handle = await idbGet(IDB_FOLDER_KEY);
+    } catch (_) {
+      return;
+    }
+    if (!handle) return;
+    configDirHandle = handle;
+    try {
+      const perm = await handle.queryPermission({ mode: "readwrite" });
+      if (perm === "granted") {
+        setFolderStatus(handle.name, "ok");
+        await refreshConfigFileLists();
+      } else {
+        setFolderStatus(`${handle.name} (click Choose folder to reconnect)`, "warn");
+      }
+    } catch (_) {
+      setFolderStatus("Click Choose folder to reconnect", "warn");
+    }
+  }
+
+  async function ensureFolderPermission(mode) {
+    if (!configDirHandle) return false;
+    const perm = await configDirHandle.queryPermission({ mode });
+    if (perm === "granted") return true;
+    const requested = await configDirHandle.requestPermission({ mode });
+    return requested === "granted";
   }
 
   function buildAgentConfigFile(a) {
@@ -349,9 +481,7 @@
     };
   }
 
-  function saveAgentConfig(a) {
-    const fileData = buildAgentConfigFile(a);
-    const filename = agentConfigFilename(fileData.agent);
+  function downloadConfigFile(fileData, filename) {
     const blob = new Blob([JSON.stringify(fileData, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -361,7 +491,41 @@
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    setStatus(a.status, true, `Saved ${filename}`);
+  }
+
+  async function saveAgentConfig(a) {
+    const fileData = buildAgentConfigFile(a);
+    const filename = agentConfigFilename(fileData.agent);
+
+    if (configDirHandle) {
+      try {
+        const ok = await ensureFolderPermission("readwrite");
+        if (!ok) throw new Error("Permission denied");
+        const fileHandle = await configDirHandle.getFileHandle(filename, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(fileData, null, 2));
+        await writable.close();
+        setStatus(a.status, true, `Saved ${filename} to ${configDirHandle.name}`);
+        await refreshConfigFileLists();
+        return;
+      } catch (err) {
+        setStatus(a.status, false, `Save to folder failed: ${err.message}`);
+        return;
+      }
+    }
+
+    downloadConfigFile(fileData, filename);
+    setStatus(a.status, true, `Downloaded ${filename} (choose a config folder to save directly)`);
+  }
+
+  function applyConfigData(a, data, sourceLabel) {
+    if (!data || data.pingpong !== CONFIG_MARKER || !data.agent) {
+      setStatus(a.status, false, "Not a PingPong config file");
+      return;
+    }
+    restoreAgent(a, data.agent);
+    saveSettings();
+    setStatus(a.status, true, `Loaded ${sourceLabel}`);
   }
 
   function loadAgentConfigFromFile(a, file) {
@@ -374,18 +538,41 @@
         setStatus(a.status, false, "Invalid JSON file");
         return;
       }
-      if (!data || data.pingpong !== CONFIG_MARKER || !data.agent) {
-        setStatus(a.status, false, "Not a PingPong config file");
-        return;
-      }
-      restoreAgent(a, data.agent);
-      saveSettings();
-      setStatus(a.status, true, `Loaded ${file.name}`);
+      applyConfigData(a, data, file.name);
     };
     reader.onerror = () => {
       setStatus(a.status, false, "Could not read file");
     };
     reader.readAsText(file);
+  }
+
+  async function loadAgentConfigFromFolder(a) {
+    const filename = a.configSelect.value;
+    if (!filename) {
+      setStatus(a.status, false, "Select a config first");
+      return;
+    }
+    if (!configDirHandle) {
+      setStatus(a.status, false, "No config folder connected");
+      return;
+    }
+    try {
+      const ok = await ensureFolderPermission("read");
+      if (!ok) throw new Error("Permission denied");
+      const fileHandle = await configDirHandle.getFileHandle(filename);
+      const file = await fileHandle.getFile();
+      const text = await file.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (_) {
+        setStatus(a.status, false, "Invalid JSON file");
+        return;
+      }
+      applyConfigData(a, data, filename);
+    } catch (err) {
+      setStatus(a.status, false, `Load failed: ${err.message}`);
+    }
   }
 
   function wireAutoSave() {
@@ -402,8 +589,10 @@
 
   agent1.saveConfigBtn.addEventListener("click", () => saveAgentConfig(agent1));
   agent2.saveConfigBtn.addEventListener("click", () => saveAgentConfig(agent2));
-  agent1.loadConfigBtn.addEventListener("click", () => agent1.loadConfigFile.click());
-  agent2.loadConfigBtn.addEventListener("click", () => agent2.loadConfigFile.click());
+  agent1.loadConfigBtn.addEventListener("click", () => loadAgentConfigFromFolder(agent1));
+  agent2.loadConfigBtn.addEventListener("click", () => loadAgentConfigFromFolder(agent2));
+  agent1.importConfigBtn.addEventListener("click", () => agent1.loadConfigFile.click());
+  agent2.importConfigBtn.addEventListener("click", () => agent2.loadConfigFile.click());
   agent1.loadConfigFile.addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (file) loadAgentConfigFromFile(agent1, file);
@@ -414,6 +603,7 @@
     if (file) loadAgentConfigFromFile(agent2, file);
     e.target.value = "";
   });
+  chooseFolderBtn.addEventListener("click", () => chooseConfigFolder());
 
   els.startBtn.addEventListener("click", () => {
     if (!running) runConversation();
@@ -429,4 +619,5 @@
 
   loadSettings();
   wireAutoSave();
+  tryRestoreConfigFolder();
 })();

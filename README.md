@@ -12,7 +12,8 @@ Point it at any two [OpenAI Chat Completions](https://platform.openai.com/docs/a
 - **Automatic ping-pong conversation** — Agent 1's reply is fed to Agent 2 as a user message and vice versa, each with its own independent conversation history, up to a configurable number of turns with a configurable delay between turns. Start/Stop/Clear controls included.
 - **Modern chat bubble UI**, with a distinct side/style per agent.
 - **Settings persistence** — all fields are saved automatically to `localStorage`.
-- **Per-agent Save/Load config** — export a single agent's settings (including its loaded model list) to a JSON file named `[agent name]_[model].json`, and load it back later or on another machine. Config files carry a `"pingpong": "PingPong-agent-config"` marker so random/unrelated JSON files are rejected instead of silently misapplied.
+- **Per-agent Save/Load config, saved next to the app** — click *Choose folder* once (top of the page) to grant the page access to a folder on disk, e.g. the app's own folder. From then on, *Save config* writes straight into that folder as `llmpingpong_[agent name]_[model].json`, and each agent's *Load* dropdown lists every `llmpingpong_*.json` file already in that folder — pick one and click *Load*. Config files carry a `"pingpong": "PingPong-agent-config"` marker so unrelated JSON files in the folder are ignored/rejected instead of silently misapplied. The chosen folder is remembered across reloads (you may be asked to reconfirm access). An *Import…* button is also always available as a fallback to load a config file from anywhere on disk.
+  - This uses the [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API), supported in Chromium-based browsers (Chrome, Edge). In browsers without support (Firefox, Safari), *Choose folder* is disabled and *Save config* automatically falls back to a regular browser download.
 
 ## Usage
 

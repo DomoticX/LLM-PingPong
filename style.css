@@ -37,6 +37,31 @@ body {
   font-size: 0.9rem;
 }
 
+.folder-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 20px;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.folder-label {
+  color: var(--text-dim);
+}
+
+.folder-status {
+  font-weight: 600;
+  margin-right: auto;
+}
+
+.folder-status.ok { color: var(--ok); }
+.folder-status.warn { color: var(--accent-b); }
+
 .layout {
   display: flex;
   flex-direction: column;
@@ -83,10 +108,18 @@ body {
 .config-actions {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .config-actions button {
   padding: 6px 10px;
+  font-size: 0.78rem;
+}
+
+.config-select {
+  width: auto;
+  max-width: 140px;
+  padding: 6px 8px;
   font-size: 0.78rem;
 }
 

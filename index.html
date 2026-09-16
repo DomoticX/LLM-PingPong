@@ -13,6 +13,12 @@
     <p class="subtitle">Two OpenAI-compatible endpoints, one conversation.</p>
   </header>
 
+  <div class="folder-bar">
+    <span class="folder-label">Config folder:</span>
+    <span class="folder-status" id="config-folder-status">Not connected</span>
+    <button type="button" id="choose-folder-btn" class="btn-secondary">Choose folder</button>
+  </div>
+
   <main class="layout">
     <section class="agents">
       <div class="agent-card" data-agent="1">
@@ -20,7 +26,11 @@
           <h2>Agent 1</h2>
           <div class="config-actions">
             <button type="button" id="a1-save-config" class="btn-secondary">Save config</button>
-            <button type="button" id="a1-load-config" class="btn-secondary">Load config</button>
+            <select id="a1-config-select" class="config-select" aria-label="Saved configs for Agent 1">
+              <option value="">No configs found</option>
+            </select>
+            <button type="button" id="a1-load-config" class="btn-secondary">Load</button>
+            <button type="button" id="a1-import-config" class="btn-secondary" title="Import a config file from anywhere on disk">Import…</button>
             <input type="file" id="a1-load-config-file" accept="application/json" hidden>
           </div>
         </div>
@@ -61,7 +71,11 @@
           <h2>Agent 2</h2>
           <div class="config-actions">
             <button type="button" id="a2-save-config" class="btn-secondary">Save config</button>
-            <button type="button" id="a2-load-config" class="btn-secondary">Load config</button>
+            <select id="a2-config-select" class="config-select" aria-label="Saved configs for Agent 2">
+              <option value="">No configs found</option>
+            </select>
+            <button type="button" id="a2-load-config" class="btn-secondary">Load</button>
+            <button type="button" id="a2-import-config" class="btn-secondary" title="Import a config file from anywhere on disk">Import…</button>
             <input type="file" id="a2-load-config-file" accept="application/json" hidden>
           </div>
         </div>

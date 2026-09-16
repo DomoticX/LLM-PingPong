@@ -1,0 +1,2 @@
+# Per-agent config files saved by the app itself (may contain API keys)
+llmpingpong_*.json
