@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.jpg" alt="LLM-PingPong logo" width="320">
+</p>
+
 # LLM-PingPong
 
 A lightweight, self-contained HTML5/CSS/JavaScript interface that lets two OpenAI-compatible LLM endpoints have an automatic conversation with each other — no backend, no build step, no frameworks.
@@ -17,6 +21,8 @@ Point it at any two [OpenAI Chat Completions](https://platform.openai.com/docs/a
   - This uses the [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API), supported in Chromium-based browsers (Chrome, Edge). In browsers without support (Firefox, Safari), *Choose folder* is disabled and *Save config* automatically falls back to a regular browser download.
 
 ## Usage
+
+![LLM-PingPong screenshot](screen.png)
 
 1. Serve the folder with any static file server (opening `index.html` directly as a `file://` URL also works, but a local server avoids browser quirks). For example:
 
@@ -41,3 +47,4 @@ Because everything runs client-side in the browser, the LLM server itself must a
 - `index.html` — markup
 - `style.css` — styling
 - `app.js` — all application logic (no dependencies)
+- `logo.jpg`, `screen.png` — README images
