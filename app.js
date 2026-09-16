@@ -24,6 +24,7 @@
       system: document.getElementById(`a${n}-system`),
       temp: document.getElementById(`a${n}-temp`),
       maxTokens: document.getElementById(`a${n}-maxtokens`),
+      tellMaxTokens: document.getElementById(`a${n}-tell-max-tokens`),
       testBtn: document.getElementById(`a${n}-test`),
       status: document.getElementById(`a${n}-status`),
       saveConfigBtn: document.getElementById(`a${n}-save-config`),
@@ -59,7 +60,14 @@
       system: a.system.value.trim(),
       temperature: parseFloat(a.temp.value),
       maxTokens: parseInt(a.maxTokens.value, 10),
+      tellMaxTokens: a.tellMaxTokens.checked,
     };
+  }
+
+  function buildSystemContent(cfg) {
+    if (!cfg.tellMaxTokens || !cfg.maxTokens) return cfg.system;
+    const note = `Formulate your answer in max ${cfg.maxTokens} tokens.`;
+    return cfg.system ? `${cfg.system} ${note}` : note;
   }
 
   function headers(apiKey) {
@@ -193,8 +201,10 @@
 
     const history1 = [];
     const history2 = [];
-    if (cfg1.system) history1.push({ role: "system", content: cfg1.system });
-    if (cfg2.system) history2.push({ role: "system", content: cfg2.system });
+    const system1 = buildSystemContent(cfg1);
+    const system2 = buildSystemContent(cfg2);
+    if (system1) history1.push({ role: "system", content: system1 });
+    if (system2) history2.push({ role: "system", content: system2 });
 
     running = true;
     stopRequested = false;
@@ -262,6 +272,7 @@
         system: agent1.system.value,
         temp: agent1.temp.value,
         maxTokens: agent1.maxTokens.value,
+        tellMaxTokens: agent1.tellMaxTokens.checked,
       },
       agent2: {
         name: agent2.name.value,
@@ -272,6 +283,7 @@
         system: agent2.system.value,
         temp: agent2.temp.value,
         maxTokens: agent2.maxTokens.value,
+        tellMaxTokens: agent2.tellMaxTokens.checked,
       },
     };
     try {
@@ -307,6 +319,7 @@
     if (saved.system !== undefined) a.system.value = saved.system;
     if (saved.temp !== undefined) a.temp.value = saved.temp;
     if (saved.maxTokens !== undefined) a.maxTokens.value = saved.maxTokens;
+    if (saved.tellMaxTokens !== undefined) a.tellMaxTokens.checked = !!saved.tellMaxTokens;
   }
 
   function loadSettings() {
@@ -477,6 +490,7 @@
         system: cfg.system,
         temp: a.temp.value,
         maxTokens: a.maxTokens.value,
+        tellMaxTokens: cfg.tellMaxTokens,
       },
     };
   }
