@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM PingPong</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <h1>LLM PingPong</h1>
+    <p class="subtitle">Two OpenAI-compatible endpoints, one conversation.</p>
+  </header>
+
+  <main class="layout">
+    <section class="agents">
+      <div class="agent-card" data-agent="1">
+        <div class="card-header">
+          <h2>Agent 1</h2>
+          <div class="config-actions">
+            <button type="button" id="a1-save-config" class="btn-secondary">Save config</button>
+            <button type="button" id="a1-load-config" class="btn-secondary">Load config</button>
+            <input type="file" id="a1-load-config-file" accept="application/json" hidden>
+          </div>
+        </div>
+        <label>Name
+          <input type="text" id="a1-name" placeholder="Agent 1" value="Agent 1">
+        </label>
+        <label>Base URL
+          <input type="text" id="a1-baseurl" placeholder="http://192.168.1.50:1234/v1">
+        </label>
+        <label>API key
+          <input type="password" id="a1-apikey" placeholder="optional">
+        </label>
+        <label>Model
+          <div class="model-row">
+            <select id="a1-model"></select>
+            <button type="button" id="a1-load-models" class="btn-secondary">Load models</button>
+          </div>
+        </label>
+        <label>System prompt
+          <textarea id="a1-system" rows="3" placeholder="You are Agent 1."></textarea>
+        </label>
+        <div class="param-row">
+          <label>Temperature
+            <input type="number" id="a1-temp" min="0" max="2" step="0.1" value="0.8">
+          </label>
+          <label>Max tokens
+            <input type="number" id="a1-maxtokens" min="1" step="1" value="512">
+          </label>
+        </div>
+        <div class="card-actions">
+          <button type="button" id="a1-test" class="btn-secondary">Test connection</button>
+          <span class="status" id="a1-status"></span>
+        </div>
+      </div>
+
+      <div class="agent-card" data-agent="2">
+        <div class="card-header">
+          <h2>Agent 2</h2>
+          <div class="config-actions">
+            <button type="button" id="a2-save-config" class="btn-secondary">Save config</button>
+            <button type="button" id="a2-load-config" class="btn-secondary">Load config</button>
+            <input type="file" id="a2-load-config-file" accept="application/json" hidden>
+          </div>
+        </div>
+        <label>Name
+          <input type="text" id="a2-name" placeholder="Agent 2" value="Agent 2">
+        </label>
+        <label>Base URL
+          <input type="text" id="a2-baseurl" placeholder="http://192.168.1.60:1234/v1">
+        </label>
+        <label>API key
+          <input type="password" id="a2-apikey" placeholder="optional">
+        </label>
+        <label>Model
+          <div class="model-row">
+            <select id="a2-model"></select>
+            <button type="button" id="a2-load-models" class="btn-secondary">Load models</button>
+          </div>
+        </label>
+        <label>System prompt
+          <textarea id="a2-system" rows="3" placeholder="You are Agent 2."></textarea>
+        </label>
+        <div class="param-row">
+          <label>Temperature
+            <input type="number" id="a2-temp" min="0" max="2" step="0.1" value="0.8">
+          </label>
+          <label>Max tokens
+            <input type="number" id="a2-maxtokens" min="1" step="1" value="512">
+          </label>
+        </div>
+        <div class="card-actions">
+          <button type="button" id="a2-test" class="btn-secondary">Test connection</button>
+          <span class="status" id="a2-status"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="conversation-panel">
+      <div class="conv-settings">
+        <label class="grow">Initial prompt
+          <textarea id="initial-prompt" rows="2" placeholder="Discuss whether AI will replace programmers.">Discuss whether AI will replace programmers.</textarea>
+        </label>
+        <div class="conv-settings-row">
+          <label>Max turns
+            <input type="number" id="max-turns" min="1" step="1" value="20">
+          </label>
+          <label>Delay (sec)
+            <input type="number" id="turn-delay" min="0" step="0.5" value="1">
+          </label>
+          <div class="conv-buttons">
+            <button type="button" id="start-btn" class="btn-primary">Start</button>
+            <button type="button" id="stop-btn" class="btn-danger" disabled>Stop</button>
+            <button type="button" id="clear-btn" class="btn-secondary">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="conversation" id="conversation"></div>
+    </section>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
