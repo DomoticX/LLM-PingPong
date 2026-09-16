@@ -103,9 +103,23 @@
       throw new Error(`HTTP ${res.status} ${text.slice(0, 200)}`);
     }
     const data = await res.json();
-    const content = data?.choices?.[0]?.message?.content;
+    const choice = data?.choices?.[0];
+    const content = choice?.message?.content;
     if (typeof content !== "string") throw new Error("No content in response");
-    return content;
+    return {
+      content,
+      reasoningContent: typeof choice?.message?.reasoning_content === "string" ? choice.message.reasoning_content : null,
+      finishReason: choice?.finish_reason || null,
+    };
+  }
+
+  function formatReplyForDisplay(result) {
+    if (result.content.trim()) return result.content;
+    let note = result.finishReason === "length"
+      ? "(No answer — max_tokens was reached before the model produced any output. This often happens with reasoning/thinking models when max tokens is too low for their thinking phase. Try raising max tokens for this agent.)"
+      : "(The model returned an empty response.)";
+    if (result.reasoningContent) note += `\n\nReasoning output:\n${result.reasoningContent}`;
+    return note;
   }
 
   function addBubble(kind, name, text) {
@@ -221,19 +235,21 @@
       for (let turn = 0; turn < maxTurns; turn++) {
         if (stopRequested) break;
 
-        const reply1 = await chatCompletion(cfg1, history1);
+        const result1 = await chatCompletion(cfg1, history1);
         if (stopRequested) break;
+        const reply1 = result1.content;
         history1.push({ role: "assistant", content: reply1 });
-        addBubble("agent-1", cfg1.name, reply1);
+        addBubble("agent-1", cfg1.name, formatReplyForDisplay(result1));
 
         history2.push({ role: "user", content: reply1 });
         if (delayMs > 0) await sleep(delayMs);
         if (stopRequested) break;
 
-        const reply2 = await chatCompletion(cfg2, history2);
+        const result2 = await chatCompletion(cfg2, history2);
         if (stopRequested) break;
+        const reply2 = result2.content;
         history2.push({ role: "assistant", content: reply2 });
-        addBubble("agent-2", cfg2.name, reply2);
+        addBubble("agent-2", cfg2.name, formatReplyForDisplay(result2));
 
         history1.push({ role: "user", content: reply2 });
         if (delayMs > 0) await sleep(delayMs);
